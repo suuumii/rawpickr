@@ -1,0 +1,66 @@
+name: Release
+
+# v0.1.0 のような "v" から始まるタグを push したときだけ実行
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      # 1. リポジトリをチェックアウト
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. pnpm をセットアップ
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      # 3. Node.js をセットアップ（pnpm キャッシュも有効化）
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: rawpickr/pnpm-lock.yaml
+
+      # 4. Rust ツールチェーンをセットアップ
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # 5. Rust のビルドキャッシュ（2回目以降を大幅に高速化）
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: rawpickr/src-tauri -> target
+
+      # 6. フロントエンドの依存パッケージをインストール
+      - name: Install dependencies
+        working-directory: rawpickr
+        run: pnpm install
+
+      # 7. Tauri アプリをビルドして GitHub Release を作成
+      - name: Build and release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: rawpickr
+          tagName: ${{ github.ref_name }}
+          releaseName: RawPickr ${{ github.ref_name }}
+          releaseBody: |
+            ## インストール方法
+
+            下の Assets から環境に合わせてダウンロードしてください。
+
+            | ファイル | 説明 |
+            |---------|------|
+            | `RawPickr_x.x.x_x64-setup.exe` | インストーラー（推奨） |
+            | `RawPickr_x.x.x_x64_en-US.msi` | MSI インストーラー |
+          releaseDraft: false
+          prerelease: false

@@ -1,0 +1,16 @@
+test-data-01*
+data*
+
+# Claude Code ローカル設定（ローカルパスを含むため除外）
+.claude/settings.local.json
+
+# rawpickr ビルド成果物
+rawpickr/node_modules/
+rawpickr/dist/
+rawpickr/src-tauri/target/
+
+# 旧ディレクトリ名（リネーム移行期間中）
+photo-flow/node_modules/
+photo-flow/dist/
+photo-flow/src-tauri/target/
+
