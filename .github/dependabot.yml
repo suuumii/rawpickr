@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # npm パッケージ（Vue / Tauri フロントエンド）
+  - package-ecosystem: npm
+    directory: /rawpickr
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # Cargo クレート（Rust バックエンド）
+  - package-ecosystem: cargo
+    directory: /rawpickr/src-tauri
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
