@@ -37,7 +37,7 @@ pub struct OrganizerResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SortResult {
-    pub copied_count: u32,
+    pub moved_count: u32,
     pub skipped_count: u32,
     pub logs: Vec<String>,
 }

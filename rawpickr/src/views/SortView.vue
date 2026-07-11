@@ -1,13 +1,27 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
+import ConfirmDialog from "../components/ConfirmDialog.vue";
 import type { SortResult } from "../types";
 
 const folderPath = ref<string | null>(null);
 const sorting = ref(false);
 const result = ref<SortResult | null>(null);
 const error = ref<string | null>(null);
+const showConfirm = ref(false);
+
+const pickDirName = computed(() => {
+  if (!folderPath.value) return "";
+  const parts = folderPath.value.split(/[\\/]/).filter(Boolean);
+  const base = parts[parts.length - 1] ?? "";
+  return base.endsWith("_work") ? base.slice(0, -"_work".length) : base;
+});
+
+const confirmMessage = computed(
+  () =>
+    `評価 1 以上の JPG・RAW・サイドカーを「${pickDirName.value}」フォルダへ移動します。\n元ファイルはこのフォルダから無くなります。続行しますか？`,
+);
 
 async function selectFolder() {
   const selected = await open({ directory: true, multiple: false });
@@ -18,7 +32,13 @@ async function selectFolder() {
   }
 }
 
-async function runSort() {
+function requestSort() {
+  if (!folderPath.value) return;
+  showConfirm.value = true;
+}
+
+async function confirmSort() {
+  showConfirm.value = false;
   if (!folderPath.value) return;
   sorting.value = true;
   result.value = null;
@@ -26,7 +46,7 @@ async function runSort() {
   try {
     result.value = await invoke<SortResult>("sort_photos", { folder: folderPath.value });
   } catch (e) {
-    error.value = `仕分けエラー: ${e}`;
+    error.value = `ピックアップエラー: ${e}`;
   } finally {
     sorting.value = false;
   }
@@ -51,11 +71,11 @@ async function runSort() {
     <div class="flex-1 overflow-y-auto p-4 space-y-4">
       <!-- 説明 -->
       <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 space-y-1">
-        <p class="font-semibold">仕分けの動作</p>
+        <p class="font-semibold">ピックアップの動作</p>
         <ul class="list-disc list-inside space-y-0.5 text-blue-700">
-          <li>評価 1 以上の JPG を <code class="bg-blue-100 px-1 rounded">_pick/</code> フォルダへコピー</li>
-          <li>対応する RAW ファイルを <code class="bg-blue-100 px-1 rounded">_raw_pick/</code> フォルダへコピー</li>
-          <li>元ファイルは削除しません</li>
+          <li>評価 1 以上の JPG・対応する RAW・サイドカーを <code class="bg-blue-100 px-1 rounded">{YYYYMMDD}_{場所名}/</code> フォルダへ移動</li>
+          <li>移動先フォルダは元フォルダと同じ階層に作成されます（元フォルダ名の末尾が <code class="bg-blue-100 px-1 rounded">_work</code> の場合は除去した名前を使用）</li>
+          <li>元ファイルは<span class="font-semibold">移動</span>されます（コピーではありません）</li>
         </ul>
       </div>
 
@@ -63,9 +83,9 @@ async function runSort() {
       <button
         class="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-40"
         :disabled="!folderPath || sorting"
-        @click="runSort"
+        @click="requestSort"
       >
-        {{ sorting ? "仕分け中..." : "仕分けを実行" }}
+        {{ sorting ? "ピックアップ中..." : "ピックアップを実行" }}
       </button>
 
       <!-- エラー -->
@@ -76,7 +96,7 @@ async function runSort() {
       <!-- 結果サマリー -->
       <div v-if="result" class="space-y-2">
         <p class="text-sm font-semibold text-gray-700">
-          仕分け完了 — コピー: {{ result.copied_count }} 件 / スキップ: {{ result.skipped_count }} 件
+          ピックアップ完了 — 移動: {{ result.moved_count }} 件 / スキップ: {{ result.skipped_count }} 件
         </p>
         <div class="bg-gray-900 rounded p-3 max-h-64 overflow-y-auto">
           <p
@@ -87,5 +107,14 @@ async function runSort() {
         </div>
       </div>
     </div>
+
+    <!-- ピックアップ確認ダイアログ -->
+    <ConfirmDialog
+      v-if="showConfirm"
+      title="ピックアップ確認"
+      :message="confirmMessage"
+      @confirm="confirmSort"
+      @cancel="showConfirm = false"
+    />
   </div>
 </template>

@@ -1,4 +1,4 @@
-use crate::models::{find_raw_for, OrganizerResult, RAW_EXTENSIONS};
+use crate::models::{find_raw_for, move_file_with_sidecar, OrganizerResult, RAW_EXTENSIONS};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{BufReader, Read};
@@ -171,33 +171,18 @@ fn ensure_dir(
     Ok(())
 }
 
-/// ファイルと対応するサイドカー（.pp3）を dest_dir へ移動する。
+/// ファイルと対応するサイドカーを dest_dir へ移動し、結果に反映する。
 fn move_file_and_sidecar(
     src: &Path,
     dest_dir: &Path,
     dest_dir_name: &str,
     result: &mut OrganizerResult,
 ) -> Result<(), String> {
-    let name = src.file_name().unwrap();
-    let dest = dest_dir.join(name);
-    fs::rename(src, &dest)
-        .map_err(|e| format!("移動失敗 {} → {}: {}", src.display(), dest.display(), e))?;
-    result.moved_count += 1;
-    result.logs.push(format!("MOVE: {} → {}", name.to_string_lossy(), dest_dir_name));
-
-    // サイドカー: DSCF2800.JPG.pp3 / DSCF2800.RAF.pp3
-    let ext = src.extension().unwrap_or_default().to_string_lossy().to_string();
-    let sidecar = src.with_extension(format!("{}.pp3", ext));
-    if sidecar.exists() {
-        let sc_name = sidecar.file_name().unwrap();
-        let sc_dest = dest_dir.join(sc_name);
-        fs::rename(&sidecar, &sc_dest).map_err(|e| {
-            format!("pp3 移動失敗 {} → {}: {}", sidecar.display(), sc_dest.display(), e)
-        })?;
+    let moved = move_file_with_sidecar(src, dest_dir)?;
+    for name in moved {
         result.moved_count += 1;
-        result.logs.push(format!("MOVE: {} → {}", sc_name.to_string_lossy(), dest_dir_name));
+        result.logs.push(format!("MOVE: {} → {}", name, dest_dir_name));
     }
-
     Ok(())
 }
 

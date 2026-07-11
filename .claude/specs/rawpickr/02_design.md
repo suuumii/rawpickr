@@ -2,7 +2,7 @@
 
 **ステータス**: 承認済み（実装完了）
 **前提**: `01_requirements.md` 承認済み
-**更新日**: 2026-05-06
+**更新日**: 2026-07-11
 
 ---
 
@@ -35,9 +35,9 @@ photo-flow/
 │       │   ├── browse.rs       # list_photos, read_exif, read_raw_preview
 │       │   ├── delete.rs       # delete_photo
 │       │   ├── organize.rs     # scan_dates, organize_photos
-│       │   └── sort.rs         # sort_photos
+│       │   └── sort.rs         # sort_photos（レーティング済みファイルの移動）
 │       └── models/
-│           ├── mod.rs          # RAW_EXTENSIONS 定数, find_raw_for ヘルパー
+│           ├── mod.rs          # RAW_EXTENSIONS 定数, find_raw_for / move_file_with_sidecar ヘルパー
 │           ├── photo.rs        # Photo, ExifInfo, PhotoFileType 構造体
 │           └── rating.rs       # RatingStore 構造体
 ├── icon-chatgpt.png            # アプリアイコン原画像
@@ -167,15 +167,25 @@ pub struct OrganizerResult {
     pub skipped_count: u32,
     pub logs: Vec<String>,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct SortResult {
+    pub moved_count: u32,   // 旧: copied_count（コピー→移動への変更に伴い改名）
+    pub skipped_count: u32,
+    pub logs: Vec<String>,
+}
 ```
 
 ### フォルダ命名規則
 
 ```
 {YYYYMMDD}_{場所名}_work/     # 日付別整理先（JPG + RAW + サイドカー）
-{元フォルダ名}_pick/           # レーティング済み JPG コピー先
-{元フォルダ名}_raw_pick/       # レーティング済み JPG に対応する RAW コピー先
+{YYYYMMDD}_{場所名}/          # ピックアップ先（元フォルダと同階層、JPG + RAW + サイドカーを移動）
 ```
+
+ピックアップ先フォルダ名は、選択元フォルダ名から自動生成する（`sort.rs` の `derive_pick_dir_name()`）。
+- 元フォルダ名が `{YYYYMMDD}_{場所名}_work` 形式（末尾が `_work`）に一致する場合 → 末尾の `_work` を除去した名前を使う
+- 一致しない場合 → 元フォルダ名をそのまま使う
 
 ### 整理ロジック（organize.rs）
 
@@ -188,6 +198,24 @@ pub struct OrganizerResult {
 1. 対応 JPG がない RAW ファイルを検出
 2. RAW の EXIF から日付を読み取る（直接読み取り失敗時は埋め込み JPEG から）
 3. 同フォルダへ移動
+
+ファイル本体 + `.pp3` サイドカーの移動処理は `models/mod.rs` の共通ヘルパー `move_file_with_sidecar(src, dest_dir) -> Result<Vec<String>, String>`（移動したファイル名のリストを返す）に切り出し、`organize.rs` と `sort.rs` の両方から利用する（従来 `organize.rs` にプライベート関数として実装されていたものを共通化）。
+
+### ピックアップロジック（sort.rs, 2026-07-11 改訂）
+
+`sort_photos(folder)`:
+
+1. `derive_pick_dir_name(folder)` で移動先フォルダ名を算出し、`dest_dir = folder の親 / 移動先フォルダ名` を決定する（存在しなければ作成、存在すれば再利用）
+2. **Phase A（JPG 基準）**: フォルダ内の JPG を走査し、`.ratings.json` のレーティングが 1 以上のものについて
+   - JPG 本体 + サイドカーを `move_file_with_sidecar` で `dest_dir` へ移動
+   - `find_raw_for()` で対応 RAW を探し、見つかれば同様に RAW 本体 + サイドカーを移動（RAW ステムを処理済みとして記録し Phase B でスキップ）
+   - 見つからなければログに `SKIP (RAW なし)` を記録
+   - 移動した各ファイルについて `RatingStore::remove(folder, filename)` → `RatingStore::write(dest_dir, filename, rating)` でレーティングを移動先へ引き継ぐ
+3. **Phase B（RAW 単体）**: Phase A で処理済みでない RAW のうち、レーティングが 1 以上のものを同様に移動し、レーティングを引き継ぐ
+4. レーティングが 0 のファイルはそのまま元フォルダに残す（スキップとしてカウント）
+5. `SortResult { moved_count, skipped_count, logs }` を返す
+
+`organize_photos` と同様の「JPG 基準 → RAW 単体」の 2 フェーズ構成を踏襲し、`moved_raw_stems` による二重処理防止パターンも再利用する。
 
 ### RAW 拡張子対応
 
@@ -223,3 +251,4 @@ pub const RAW_EXTENSIONS: &[&str] = &[
 | `find_raw_for` をディレクトリスキャンで実装 | 拡張子の大文字小文字問題を根本解決 |
 | タブパネルを `v-show` で制御（`v-if` ではなく） | 非表示時も DOM を保持することで状態（フォルダ選択など）を維持 |
 | `ConfirmDialog` を `Teleport` で body 直下に描画 | BrowseView が単一ルート要素であることと両立するため |
+| `move_file_with_sidecar` を `organize.rs` から `models/mod.rs` へ切り出し共通化 | `sort.rs` も同じ「本体 + `.pp3` サイドカー移動」ロジックが必要になったため（US-04 改訂） |

@@ -1,8 +1,8 @@
 # タスクリスト — RawPickr (Tauri + Vue 3 + Rust)
 
-**ステータス**: 全タスク完了
+**ステータス**: 全タスク完了（Phase 10 含む）
 **前提**: `02_design.md` 承認済み
-**更新日**: 2026-05-06
+**更新日**: 2026-07-11
 
 ---
 
@@ -94,6 +94,30 @@
 - [x] Task 35: RAW ファイルのプレビュー表示（埋め込み JPEG 抽出、base64 data URL）
 - [x] Task 36: ファイル一覧に JPG/RAW バッジを追加（ペアがない場合のみ表示）
 - [x] Task 37: Windows 配布用インストーラーをビルド（MSI + NSIS）
+
+---
+
+## Phase 10: ピックアップ機能の仕様変更（US-04 改訂, 2026-07-11）
+
+- [x] Task 38: `models/mod.rs` に共通ヘルパー `move_file_with_sidecar(src: &Path, dest_dir: &Path) -> Result<Vec<String>, String>` を実装する（移動したファイル名のリストを返す。本体 + `.pp3` サイドカーを対象）
+- [x] Task 39: `commands/organize.rs` のプライベート関数 `move_file_and_sidecar` を削除し、Task 38 の共通ヘルパーを使うようリファクタリングする（呼び出し側で `moved_count` 加算・ログ出力を行う）
+- [x] Task 40: `models/photo.rs` の `SortResult.copied_count` を `moved_count` にリネームする
+- [x] Task 41: `commands/sort.rs` に `derive_pick_dir_name(folder_name: &str) -> String` を実装する（末尾が `_work` なら除去、それ以外はそのまま返す）
+- [x] Task 42: `commands/sort.rs` の `sort_photos` を新仕様で書き換える
+  - 移動先フォルダ: 元フォルダと同階層の `{derive_pick_dir_name}` （存在すれば再利用、なければ作成）
+  - Phase A: JPG 基準でレーティング 1 以上のものを本体・対応 RAW・サイドカーごと移動（`find_raw_for` + Task 38 のヘルパー使用）
+  - Phase B: Phase A 未処理の RAW 単体でレーティング 1 以上のものを移動
+  - 各移動ファイルについて `RatingStore::remove`（元フォルダ）→ `RatingStore::write`（移動先フォルダ）でレーティングを引き継ぐ
+  - レーティング 0 のファイルはスキップとしてカウントし元フォルダに残す
+- [x] Task 43: `src/types/index.ts` の `SortResult.copied_count` を `moved_count` にリネームする
+- [x] Task 44: `SortView.vue` を新仕様に合わせて更新する（ボタン文言「ピックアップ実行」、説明文、結果サマリーの `moved_count` 表示）
+- [x] Task 45: `README.md` と `.claude/constitution.md` のピックアップ機能に関する記述（`_pick` / `_raw_pick` 言及箇所）を新仕様に合わせて更新する
+
+---
+
+## Phase 11: ピックアップ実行時の確認ダイアログ追加（2026-07-11）
+
+- [x] Task 46: `SortView.vue` に `ConfirmDialog` を組み込み、「ピックアップを実行」クリック時に確認ダイアログを表示してから `sort_photos` を呼び出すようにする（`BrowseView.vue` の削除確認ダイアログと同じパターン）
 
 ---
 

@@ -25,7 +25,7 @@ export interface OrganizerResult {
 }
 
 export interface SortResult {
-  copied_count: number;
+  moved_count: number;
   skipped_count: number;
   logs: string[];
 }
