@@ -57,6 +57,30 @@ pnpm tauri build
 
 ---
 
+## 公開手順（GitHub Release）
+
+タグを push すると GitHub Actions（`.github/workflows/release.yml`）が自動でビルドし、GitHub Release を作成する。手動ビルドは不要。
+
+1. バージョン番号を更新する（3 ファイルとも揃える）
+   - `rawpickr/package.json` の `version`
+   - `rawpickr/src-tauri/Cargo.toml` の `version`
+   - `rawpickr/src-tauri/tauri.conf.json` の `version`
+2. `cd rawpickr/src-tauri && cargo check` を実行し、`Cargo.lock` にもバージョンを反映させる
+3. 変更を `main` にコミット・push する
+4. バージョン番号と同じ名前のタグを push する
+   ```bash
+   git tag 0.0.2
+   git push origin 0.0.2
+   ```
+5. GitHub Actions の `Release` ワークフローが自動実行され、ビルド完了後に GitHub Release（インストーラー付き）が作成される
+   ```bash
+   gh run list --repo suuumii/rawpickr --workflow=release.yml --limit 1
+   ```
+
+**注意**: タグは `[0-9]*` にマッチするもの（例: `0.0.2`）のみがリリースをトリガーする。`v` プレフィックス付きタグ（`v0.0.2` など）では動かない。
+
+---
+
 ## 技術スタック
 
 | 領域 | 技術 |
