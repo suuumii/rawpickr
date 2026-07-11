@@ -1,6 +1,6 @@
 [package]
 name = "rawpickr"
-version = "0.1.0"
+version = "0.0.2"
 description = "RAW photo culling and management tool"
 authors = []
 edition = "2021"
