@@ -53,7 +53,10 @@ pub fn list_photos(folder: String) -> Result<Vec<Photo>, String> {
         .collect();
 
     // 対応 JPG のない RAW ファイルを追加
-    for entry in fs::read_dir(&folder).map_err(|e| e.to_string())?.filter_map(|e| e.ok()) {
+    for entry in fs::read_dir(&folder)
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| e.ok())
+    {
         let path = entry.path();
         let ext = match path.extension().and_then(|e| e.to_str()) {
             Some(e) => e.to_lowercase(),
@@ -102,21 +105,17 @@ fn extract_jpeg_preview(path: &Path) -> Option<Vec<u8>> {
     // ── RAF ヘッダー解析 (Fujifilm RAW) ────────────────────────────────
     let mut header = [0u8; 92];
     if file.read_exact(&mut header).is_ok() && &header[..16] == b"FUJIFILMCCD-RAW " {
-        let jpeg_offset =
-            u32::from_be_bytes(header[84..88].try_into().ok()?) as u64;
-        let jpeg_size =
-            u32::from_be_bytes(header[88..92].try_into().ok()?) as usize;
+        let jpeg_offset = u32::from_be_bytes(header[84..88].try_into().ok()?) as u64;
+        let jpeg_size = u32::from_be_bytes(header[88..92].try_into().ok()?) as usize;
 
-        if jpeg_offset > 0 && jpeg_size > 0 {
-            if file.seek(SeekFrom::Start(jpeg_offset)).is_ok() {
-                let mut jpeg = vec![0u8; jpeg_size];
-                if file.read_exact(&mut jpeg).is_ok()
-                    && jpeg.len() >= 2
-                    && jpeg[0] == 0xFF
-                    && jpeg[1] == 0xD8
-                {
-                    return Some(jpeg);
-                }
+        if jpeg_offset > 0 && jpeg_size > 0 && file.seek(SeekFrom::Start(jpeg_offset)).is_ok() {
+            let mut jpeg = vec![0u8; jpeg_size];
+            if file.read_exact(&mut jpeg).is_ok()
+                && jpeg.len() >= 2
+                && jpeg[0] == 0xFF
+                && jpeg[1] == 0xD8
+            {
+                return Some(jpeg);
             }
         }
     }
@@ -205,19 +204,5 @@ fn format_shutter(exif: &exif::Exif) -> Option<String> {
             }
         }),
         _ => None,
-    }
-}
-
-impl Default for ExifInfo {
-    fn default() -> Self {
-        ExifInfo {
-            camera: None,
-            lens: None,
-            f_number: None,
-            shutter_speed: None,
-            iso: None,
-            focal_length: None,
-            taken_at: None,
-        }
     }
 }

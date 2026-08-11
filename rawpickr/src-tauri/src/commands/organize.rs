@@ -69,7 +69,9 @@ pub fn organize_photos(
             Some(d) => d,
             None => {
                 result.skipped_count += 1;
-                result.logs.push(format!("SKIP (EXIF なし): {}", jpg_path.display()));
+                result
+                    .logs
+                    .push(format!("SKIP (EXIF なし): {}", jpg_path.display()));
                 continue;
             }
         };
@@ -78,7 +80,11 @@ pub fn organize_photos(
             Some(p) if !p.is_empty() => p.clone(),
             _ => {
                 result.skipped_count += 1;
-                result.logs.push(format!("SKIP (場所未設定 {}): {}", date, jpg_path.display()));
+                result.logs.push(format!(
+                    "SKIP (場所未設定 {}): {}",
+                    date,
+                    jpg_path.display()
+                ));
                 continue;
             }
         };
@@ -129,7 +135,9 @@ pub fn organize_photos(
             Some(d) => d,
             None => {
                 result.skipped_count += 1;
-                result.logs.push(format!("SKIP (EXIF なし): {}", raw_path.display()));
+                result
+                    .logs
+                    .push(format!("SKIP (EXIF なし): {}", raw_path.display()));
                 continue;
             }
         };
@@ -138,7 +146,11 @@ pub fn organize_photos(
             Some(p) if !p.is_empty() => p.clone(),
             _ => {
                 result.skipped_count += 1;
-                result.logs.push(format!("SKIP (場所未設定 {}): {}", date, raw_path.display()));
+                result.logs.push(format!(
+                    "SKIP (場所未設定 {}): {}",
+                    date,
+                    raw_path.display()
+                ));
                 continue;
             }
         };
@@ -181,7 +193,9 @@ fn move_file_and_sidecar(
     let moved = move_file_with_sidecar(src, dest_dir)?;
     for name in moved {
         result.moved_count += 1;
-        result.logs.push(format!("MOVE: {} → {}", name, dest_dir_name));
+        result
+            .logs
+            .push(format!("MOVE: {} → {}", name, dest_dir_name));
     }
     Ok(())
 }
@@ -212,12 +226,23 @@ fn read_date(path: &Path) -> Option<String> {
 fn parse_date_from_exif(exif: &exif::Exif) -> Option<String> {
     let field = exif.get_field(exif::Tag::DateTimeOriginal, exif::In::PRIMARY)?;
     let raw = match &field.value {
-        exif::Value::Ascii(v) => v.first().and_then(|s| std::str::from_utf8(s).ok())?.to_string(),
+        exif::Value::Ascii(v) => v
+            .first()
+            .and_then(|s| std::str::from_utf8(s).ok())?
+            .to_string(),
         _ => field.display_value().to_string(),
     };
     // "2024:01:15 12:34:56" → "20240115"
-    let compact: String = raw.chars().take(10).filter(|c| c.is_ascii_digit()).collect();
-    if compact.len() == 8 { Some(compact) } else { None }
+    let compact: String = raw
+        .chars()
+        .take(10)
+        .filter(|c| c.is_ascii_digit())
+        .collect();
+    if compact.len() == 8 {
+        Some(compact)
+    } else {
+        None
+    }
 }
 
 /// RAW ファイルに埋め込まれた JPEG プレビューから EXIF 日付を読む。

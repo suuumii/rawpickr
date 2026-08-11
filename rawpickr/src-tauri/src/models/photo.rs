@@ -16,7 +16,7 @@ pub struct Photo {
     pub file_type: PhotoFileType,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ExifInfo {
     pub camera: Option<String>,
     pub lens: Option<String>,
