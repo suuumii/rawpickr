@@ -1,4 +1,6 @@
-use crate::models::{find_raw_for, move_file_with_sidecar, RatingStore, SortResult, RAW_EXTENSIONS};
+use crate::models::{
+    find_raw_for, move_file_with_sidecar, RatingStore, SortResult, RAW_EXTENSIONS,
+};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -51,14 +53,28 @@ pub fn sort_photos(folder: String) -> Result<SortResult, String> {
             continue;
         }
 
-        move_and_track(jpg_path, &dest_dir, &folder, &dest_dir_str, rating, &mut result)?;
+        move_and_track(
+            jpg_path,
+            &dest_dir,
+            &folder,
+            &dest_dir_str,
+            rating,
+            &mut result,
+        )?;
 
         if let Some(raw_str) = find_raw_for(&jpg_path.to_string_lossy()) {
             let raw_path = PathBuf::from(&raw_str);
             if let Some(stem) = raw_path.file_stem().and_then(|s| s.to_str()) {
                 moved_raw_stems.insert(stem.to_lowercase());
             }
-            move_and_track(&raw_path, &dest_dir, &folder, &dest_dir_str, rating, &mut result)?;
+            move_and_track(
+                &raw_path,
+                &dest_dir,
+                &folder,
+                &dest_dir_str,
+                rating,
+                &mut result,
+            )?;
         } else {
             result.logs.push(format!("SKIP (RAW なし): {filename}"));
         }
@@ -95,7 +111,14 @@ pub fn sort_photos(folder: String) -> Result<SortResult, String> {
             continue;
         }
 
-        move_and_track(raw_path, &dest_dir, &folder, &dest_dir_str, rating, &mut result)?;
+        move_and_track(
+            raw_path,
+            &dest_dir,
+            &folder,
+            &dest_dir_str,
+            rating,
+            &mut result,
+        )?;
     }
 
     Ok(result)
@@ -104,7 +127,10 @@ pub fn sort_photos(folder: String) -> Result<SortResult, String> {
 /// 移動先フォルダ名を算出する。
 /// `{YYYYMMDD}_{場所名}_work` 形式（末尾が `_work`）なら除去し、それ以外は元の名前をそのまま使う。
 fn derive_pick_dir_name(folder_name: &str) -> String {
-    folder_name.strip_suffix("_work").unwrap_or(folder_name).to_string()
+    folder_name
+        .strip_suffix("_work")
+        .unwrap_or(folder_name)
+        .to_string()
 }
 
 /// ファイル（+サイドカー）を dest_dir へ移動し、レーティングを引き継ぎつつ結果に反映する。
@@ -120,7 +146,9 @@ fn move_and_track(
     let moved = move_file_with_sidecar(src, dest_dir)?;
     for (i, name) in moved.iter().enumerate() {
         result.moved_count += 1;
-        result.logs.push(format!("MOVE: {} → {}", name, dest_dir_str));
+        result
+            .logs
+            .push(format!("MOVE: {} → {}", name, dest_dir_str));
         if i == 0 {
             RatingStore::remove(src_folder, name)?;
             RatingStore::write(dest_dir_str, name, rating)?;
