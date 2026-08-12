@@ -1,4 +1,4 @@
-# rawpickr ループ状態（最終更新: 2026-08-12 tick5）
+# rawpickr ループ状態（最終更新: 2026-08-12 tick6・人間対応）
 
 ## A. 依存更新PR（ボット作成・要CI確認のみ、generator不要）
 | PR | タイトル | CI状態 | セキュリティ紐付き | マージ方針 | ステータス |
@@ -17,8 +17,8 @@
 ## B. セキュリティアラート（PR未作成・要generator）
 | Alert# | パッケージ | 深刻度 | 種別 | manifest | 優先度 | ステータス |
 |---|---|---|---|---|---|---|
-| 9 | nanoid | **High** | npm/推移的（postcss経由） | rawpickr/pnpm-lock.yaml | 最高 | **pr_opened** → PR #44（CI green済み。**人間のレビュー・マージ待ち**、まだマージされていない） |
-| 8 | postcss | Medium | npm/推移的（vite経由） | rawpickr/pnpm-lock.yaml | 中 | **pr_opened** → PR #45（今回作成。CI実行中） |
+| 9 | nanoid | **High** | npm/推移的（postcss経由） | rawpickr/pnpm-lock.yaml | 最高 | **merged**（PR #44、人間がマージ） |
+| 8 | postcss | Medium | npm/推移的（vite経由） | rawpickr/pnpm-lock.yaml | 中 | **pr_opened** → PR #45（PR#44マージによるコンフリクトを解消・再push、CI実行中。人間のレビュー・マージ待ち） |
 | 6 | serde_with | Medium | cargo/推移的 | rawpickr/src-tauri/Cargo.lock | 中 | pending |
 | 1 | glib | Medium | cargo/推移的 | rawpickr/src-tauri/Cargo.lock | 中 | pending |
 | 2 | rand | Low | cargo/推移的 | rawpickr/src-tauri/Cargo.lock | 低 | pending |
@@ -37,14 +37,13 @@
 
 ## メモ
 - **#36 (typescript 7.0.2) のCI失敗**: `vue-tsc@3.3.7` が `typescript@7.0.2` の `./lib/tsc` エクスポートに未対応（`ERR_PACKAGE_PATH_NOT_EXPORTED`）。vue-tscとtypescriptの協調アップデートが必要。深追いせず記録のみ、変化なし。
-- **PR #44 (nanoid, Alert#9)**: CI green・mergeStateStatus CLEANを確認済みだが、まだ人間にマージされていない。**引き続き人間のレビュー・マージをお待ちしています。**
-- **Alert#8 (postcss, Medium) 対応・PR #45 を今tickで作成**:
-  - vite（`postcss: "^8.5.16"`宣言）経由の推移的依存。修正前のmainには`postcss@8.5.19`（脆弱、GHSA-fxqj-rqcc-2cmp、`from`オプション未指定時にsourceMappingURLの絶対パス/`..`トラバーサルガードが効かず`.map`ファイル内容が漏洩しうる）と`postcss@8.5.26`（対策済み、`@vue/compiler-sfc`経由）が混在していた
-  - generatorが`pnpm-workspace.yaml`に`overrides: { postcss: ^8.5.23 }`を追加（PR #44の教訓を踏まえ、最初から`package.json`の`"pnpm"`フィールドではなくpnpm-workspace.yaml側に配置）→ postcss@8.5.26に統一
-  - reviewerがCIと同条件（pnpm 10.33.2 / pnpm@latest 11.21.0 両方）で`--frozen-lockfile`成功、ビルド成功、**生成CSSがmainとバイト単位で完全一致**することまで確認しPASS。差し戻しなしで一発PASS
-  - PR #45作成・push済み。push後のCIは実行中（未確認、次tickで見る）
-- **PR #44とPR #45は両方ともpostcssのバージョンに触れる**（#44はoverride `nanoid: ^3.3.17`経由でpostcssには触れないが、pnpm-workspace.yamlのoverridesセクションを両方が独立に追加している）。どちらかが先にmainにマージされた場合、もう一方はoverridesセクションの重複でコンフリクトする可能性が高い。**次tickでどちらかがマージされていたら、残りのPRブランチをmainにマージしてコンフリクト解消・再検証すること**
+- **PR #44 (nanoid, Alert#9) は人間がマージ済み。** worktree `../rawpickr-worktrees/fix-nanoid-dos` は削除可。
+- **PR #45 (postcss, Alert#8) でPR#44マージ後にコンフリクト発生・解消済み**:
+  - 予想通り、PR #44とPR #45は両方とも `rawpickr/pnpm-workspace.yaml` の `overrides` セクションに手を加えていたため、先にマージされたPR #44の影響でPR #45が`mergeable_state: dirty`になった
+  - `git merge origin/main` でPR #45ブランチにmainを取り込み、overridesを両方保持する形（`postcss: ^8.5.23` / `nanoid: ^3.3.17`）に手動解決。lockfileはコンフリクトマーカーを直接編集せず、main版で上書きしてから`pnpm install`で再生成
+  - reviewerが再検証: `pnpm why nanoid`/`pnpm why postcss`とも単一バージョンに統一（nanoid 3.3.18, postcss 8.5.26）、`--frozen-lockfile`成功、ビルド成功、Rust側無影響（cargo fmt/clippy/check/test全通過）を確認しPASS
+  - 解消コミット（737f77e）をpush済み。`mergeable: true`に復帰、CI再実行中
 - worktree:
-  - `../rawpickr-worktrees/fix-nanoid-dos`（branch `loop/fix-nanoid-dos`）: PR #44マージ後に削除可
+  - `../rawpickr-worktrees/fix-nanoid-dos`（branch `loop/fix-nanoid-dos`）: **削除済み**（PR #44マージ済み、worktree・ローカルブランチとも削除完了）
   - `../rawpickr-worktrees/fix-postcss-map-leak`（branch `loop/fix-postcss-map-leak`）: PR #45マージ後に削除可
 - 残り優先度中のB案件（serde_with, glib）とlowのrand alertは次回以降に着手
