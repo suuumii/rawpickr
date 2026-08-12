@@ -1,24 +1,24 @@
-# rawpickr ループ状態（最終更新: 2026-08-12 初回実運用後）
+# rawpickr ループ状態（最終更新: 2026-08-12 tick2）
 
 ## A. 依存更新PR（ボット作成・要CI確認のみ、generator不要）
 | PR | タイトル | CI状態 | セキュリティ紐付き | マージ方針 | ステータス |
 |---|---|---|---|---|---|
-| #41 | Bump base64 0.22.1→0.23.0 (cargo) | SUCCESS | いいえ | 自動マージ候補 | **merged** |
-| #40 | Bump serde_json 1.0.150→1.0.151 (cargo) | SUCCESS | いいえ | 自動マージ候補 | **merged** |
-| #39 | Bump tauri-plugin-dialog 2.7.1→2.7.2 (cargo) | SUCCESS | いいえ | 自動マージ候補 | **merged** |
-| #38 | Bump serde 1.0.228→1.0.229 (cargo) | SUCCESS | いいえ | 自動マージ候補 | **merged** |
-| #35 | Bump vite 6.4.3→8.1.4 (npm, メジャー2つ分) | SUCCESS | いいえ | 自動マージ候補 | **merged** |
-| #33 | Bump @tauri-apps/api 2.11.0→2.11.1 (npm) | SUCCESS | いいえ | 自動マージ候補 | **merged** |
-| #32 | Bump actions/setup-node 6→7 (github-actions) | SUCCESS | いいえ | 自動マージ候補 | **merged** |
-| #37 | Bump @vitejs/plugin-vue 6.0.7→6.0.8 (npm) | **FAILURE** | いいえ | CI失敗のためブロック（要調査） | blocked |
-| #36 | Bump typescript 6.0.3→7.0.2 (npm, メジャー) | **FAILURE** | いいえ | CI失敗のためブロック（要調査） | blocked |
-| #34 | Bump vue 3.5.34→3.5.39 (npm) | SUCCESS | いいえ | 自動マージ候補 | **@dependabot rebase依頼済み**（他PRのマージでコンフリクト発生→リベース待ち） |
+| #41 | Bump base64 0.22.1→0.23.0 (cargo) | SUCCESS | いいえ | 自動マージ候補 | **merged**（前回まで） |
+| #40 | Bump serde_json 1.0.150→1.0.151 (cargo) | SUCCESS | いいえ | 自動マージ候補 | **merged**（前回まで） |
+| #39 | Bump tauri-plugin-dialog 2.7.1→2.7.2 (cargo) | SUCCESS | いいえ | 自動マージ候補 | **merged**（前回まで） |
+| #38 | Bump serde 1.0.228→1.0.229 (cargo) | SUCCESS | いいえ | 自動マージ候補 | **merged**（前回まで） |
+| #35 | Bump vite 6.4.3→8.1.4 (npm, メジャー2つ分) | SUCCESS | いいえ | 自動マージ候補 | **merged**（前回まで） |
+| #33 | Bump @tauri-apps/api 2.11.0→2.11.1 (npm) | SUCCESS | いいえ | 自動マージ候補 | **merged**（前回まで） |
+| #32 | Bump actions/setup-node 6→7 (github-actions) | SUCCESS | いいえ | 自動マージ候補 | **merged**（前回まで） |
+| #37 | Bump @vitejs/plugin-vue 6.0.7→6.0.8 (npm) | SUCCESS | いいえ | 自動マージ候補 | **merged**（前回tick） |
+| #34 | Bump vue 3.5.34→3.5.41 (npm) | SUCCESS | いいえ | 自動マージ候補 | **merged**（今回tick。dependabotの自動rebaseが反映され、コンフリクト解消） |
+| #36 | Bump typescript 6.0.3→7.0.2 (npm, メジャー) | **FAILURE** | いいえ | CI失敗のためブロック（原因判明・要判断） | blocked |
 
 ## B. セキュリティアラート（PR未作成・要generator）
 | Alert# | パッケージ | 深刻度 | 種別 | manifest | 優先度 | ステータス |
 |---|---|---|---|---|---|---|
-| 9 | nanoid | **High** | npm/推移的 | rawpickr/pnpm-lock.yaml | 最高 | pending |
-| 8 | postcss | Medium | npm/推移的 | rawpickr/pnpm-lock.yaml | 中（旧#7から番号変更） | pending |
+| 9 | nanoid | **High** | npm/推移的（postcss経由） | rawpickr/pnpm-lock.yaml | 最高 | **pr_opened** → PR #44（CI確認中、下記メモ参照） |
+| 8 | postcss | Medium | npm/推移的 | rawpickr/pnpm-lock.yaml | 中 | pending |
 | 6 | serde_with | Medium | cargo/推移的 | rawpickr/src-tauri/Cargo.lock | 中 | pending |
 | 1 | glib | Medium | cargo/推移的 | rawpickr/src-tauri/Cargo.lock | 中 | pending |
 | 2 | rand | Low | cargo/推移的 | rawpickr/src-tauri/Cargo.lock | 低 | pending |
@@ -32,8 +32,16 @@
 | PR/Issue | 理由 |
 |---|---|
 | #42 | 人間（loop運用者）が直接作成したPR（CI強化）。マージ済み |
+| #44 | 今回のループ自身が作成したPR（種別B: nanoid修正）。上記Bセクションで追跡 |
 
 ## メモ
-- #37, #36 のCI失敗は原因未調査。`vue-tsc --noEmit` の型チェックで落ちている可能性が高い（typescriptのメジャーアップ）。次の評価者ステップで詳細を確認する。
-- `nanoid`アラートは今回のループ稼働中に新規発生を確認（discoveryを毎回実行し直す価値の実例）。
-- 旧Alert#7が消え新Alert#8としてpostcssが再掲されている＝アドバイザリ内容が更新された可能性。次回generator着手時に詳細を再確認する。
+- **#36 (typescript 7.0.2) のCI失敗、原因判明**: `vue-tsc@3.3.7` が `typescript@7.0.2` の `./lib/tsc` サブパスをエクスポートとして認識できず `ERR_PACKAGE_PATH_NOT_EXPORTED` で落ちている。vue-tsc側がtypescript 7系にまだ対応していない可能性が高い。typescriptとvue-tscの協調アップデートが必要で、単純な自動マージ対象ではない。深追いはせず記録のみ（必要ならIssue化を人間に相談）。
+- **#34 (vue) は今回tickでマージ成功**: 前回・前々回とmainの更新でコンフリクトを繰り返していたが、dependabotへの`@dependabot rebase`依頼が反映され、今回のスクリプト実行でCI green・コンフリクトなしでマージできた。
+- **Alert#9 (nanoid, High) 対応・PR #44、CI失敗を追加で検出・修正**:
+  - generator 1回目 `pnpm.overrides.nanoid: ">=3.3.17"` → reviewer REJECT（postcssの宣言範囲`^3.3.12`を逸脱、nanoid 6.0.1まで引き上げ）
+  - generator 2回目 `^3.3.17` に修正 → reviewer PASS → PR #44 作成・push
+  - **push後の実CIで別の問題が発覚**: CIの`pnpm/action-setup@v6`は`version: latest`指定でローカル(10.33.2)より新しいpnpmを使っており、`package.json`の`"pnpm"`フィールドがもはや読まれず（`ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`でinstall失敗）。overrideを`rawpickr/pnpm-workspace.yaml`の`overrides:`セクションに移動する修正を追加コミット（e963df3）。reviewerが`pnpm@latest`(11.21.0)で`--frozen-lockfile`を実際に再現し解消を確認、再度PASS。
+  - この追加修正はreviewerのREJECTによる差し戻しではなく、実CI環境で判明した設定の置き場所ミスの是正のため、1ターン1件ルールの「2回落ちたら人間に渡す」カウントには含めていない
+  - push後のCI結果はMonitorで監視中（次tick開始時までに結果が出ていればここに追記される想定）。**もしまだ失敗するようなら、この時点で一旦人間に相談する**（同じPRで3回目の失敗は差し戻し上限に近いため）
+- worktree `../rawpickr-worktrees/fix-nanoid-dos`（branch `loop/fix-nanoid-dos`）は引き続き使用中。CI green確認まで残す
+- 残り優先度中のB案件（postcss, serde_with, glib）とlowのrand alertは次回以降に着手（今tickはPR #44のCI修正で手一杯のため新規generator着手は見送り）
