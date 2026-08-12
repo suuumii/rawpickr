@@ -17,7 +17,7 @@
 ## B. セキュリティアラート（PR未作成・要generator）
 | Alert# | パッケージ | 深刻度 | 種別 | manifest | 優先度 | ステータス |
 |---|---|---|---|---|---|---|
-| 9 | nanoid | **High** | npm/推移的（postcss経由） | rawpickr/pnpm-lock.yaml | 最高 | **pr_opened** → PR #44（CI green、main最新化してpush済み、CI再確認中） |
+| 9 | nanoid | **High** | npm/推移的（postcss経由） | rawpickr/pnpm-lock.yaml | 最高 | **pr_opened** → PR #44（**CI green確認済み・mergeStateStatus CLEAN**。人間のレビュー・マージ待ち） |
 | 8 | postcss | Medium | npm/推移的 | rawpickr/pnpm-lock.yaml | 中 | pending |
 | 6 | serde_with | Medium | cargo/推移的 | rawpickr/src-tauri/Cargo.lock | 中 | pending |
 | 1 | glib | Medium | cargo/推移的 | rawpickr/src-tauri/Cargo.lock | 中 | pending |
@@ -42,6 +42,7 @@
   - generator 2回目 `^3.3.17` に修正 → reviewer PASS → PR #44 作成・push
   - **push後の実CIで別の問題が発覚**: CIの`pnpm/action-setup@v6`は`version: latest`指定でローカル(10.33.2)より新しいpnpmを使っており、`package.json`の`"pnpm"`フィールドがもはや読まれず（`ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`でinstall失敗）。overrideを`rawpickr/pnpm-workspace.yaml`の`overrides:`セクションに移動する修正を追加コミット（e963df3）。reviewerが`pnpm@latest`(11.21.0)で`--frozen-lockfile`を実際に再現し解消を確認、再度PASS。
   - この追加修正はreviewerのREJECTによる差し戻しではなく、実CI環境で判明した設定の置き場所ミスの是正のため、1ターン1件ルールの「2回落ちたら人間に渡す」カウントには含めていない
-  - **tick3で判明**: CI green確認後、GitHubがAlert#9を`auto_dismissed`にしていた。調査したところ、#34(vue)マージでロックファイルが大きく変わり、mainに`postcss@8.5.19`（nanoid 3.3.16、脆弱）と`postcss@8.5.26`（nanoid 3.3.18、対策済み）の2系統が併存する状態になっていた。PR#44ブランチはmainより3コミット遅れており、この新しいpostcss@8.5.26パスの分は未検証だったため、`git merge origin/main`でPR#44ブランチを最新化し再インストール・再ビルドを確認（2e5d633）。結果、overrideにより両方のpostcssインスタンスがnanoid 3.3.18に統一されることを確認済み。CI再実行中（Monitor監視）
-- worktree `../rawpickr-worktrees/fix-nanoid-dos`（branch `loop/fix-nanoid-dos`）は引き続き使用中。CI green確認・マージまで残す
+  - **tick3で判明**: CI green確認後、GitHubがAlert#9を`auto_dismissed`にしていた。調査したところ、#34(vue)マージでロックファイルが大きく変わり、mainに`postcss@8.5.19`（nanoid 3.3.16、脆弱）と`postcss@8.5.26`（nanoid 3.3.18、対策済み）の2系統が併存する状態になっていた。PR#44ブランチはmainより3コミット遅れており、この新しいpostcss@8.5.26パスの分は未検証だったため、`git merge origin/main`でPR#44ブランチを最新化し再インストール・再ビルドを確認（2e5d633）。結果、overrideにより両方のpostcssインスタンスがnanoid 3.3.18に統一されることを確認済み。
+  - **tick4でCI再確認**: mainマージ後の再CIが green（`mergeStateStatus: CLEAN`）であることを確認。**PR #44 は人間のレビュー・マージ待ちで完了**。以降このループはPR #44に対して何もしない
+- worktree `../rawpickr-worktrees/fix-nanoid-dos`（branch `loop/fix-nanoid-dos`）はPR #44マージ後に`git worktree remove`してよい
 - 残り優先度中のB案件（postcss, serde_with, glib）とlowのrand alertは次回以降に着手（今tickもPR #44のフォローアップで手一杯のため新規generator着手は見送り）
